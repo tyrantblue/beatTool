@@ -9,8 +9,6 @@ const props = defineProps<{
   playing: boolean
 }>()
 
-const visible = ref(false)
-
 const expectedMs = computed(() => (60000 / props.bpm) * (4 / props.denominator))
 
 const intervals = ref<number[]>([])
@@ -27,7 +25,7 @@ watch(() => props.lastBeatTime, (t) => {
     intervals.value = []
     return
   }
-  const delta = (t - prevTime) * 1000 // ms
+  const delta = (t - prevTime) * 1000
   intervals.value.push(delta)
   if (intervals.value.length > 16) intervals.value.shift()
   prevTime = t
@@ -62,59 +60,27 @@ const driftMs = computed(() => {
   return `${drift >= 0 ? '+' : ''}${drift.toFixed(1)}`
 })
 
-// Toggle with Ctrl+Shift+D
-function onKey(e: KeyboardEvent) {
-  if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-    visible.value = !visible.value
-  }
-}
-if (typeof window !== 'undefined') {
-  window.addEventListener('keydown', onKey)
+function ok(val: string): boolean {
+  const n = parseFloat(val)
+  if (isNaN(n)) return true
+  return Math.abs(n - expectedMs.value) < 2
 }
 </script>
 
 <template>
-  <div
-    v-if="visible"
-    class="fixed bottom-4 right-4 z-50 rounded-lg border border-border bg-card/95 p-3 font-mono text-xs shadow-lg backdrop-blur-sm"
-  >
-    <div class="flex items-center justify-between gap-4 mb-2">
-      <span class="font-semibold text-foreground">Timing Debug</span>
-      <button
-        class="text-muted-foreground hover:text-foreground"
-        @click="visible = false"
-      >×</button>
-    </div>
-    <div class="grid grid-cols-2 gap-x-4 gap-y-1">
-      <span class="text-muted-foreground">BPM / 拍号</span>
-      <span class="text-foreground">{{ bpm }} / {{ numerator }}/{{ denominator }}</span>
+  <div class="w-full rounded-lg border border-border bg-muted/30 p-3 font-mono text-xs">
+    <div class="grid grid-cols-5 gap-x-2 gap-y-1 text-center">
+      <span class="text-muted-foreground">预期</span>
+      <span class="text-muted-foreground">上次</span>
+      <span class="text-muted-foreground">均(16)</span>
+      <span class="text-muted-foreground">漂移</span>
+      <span class="text-muted-foreground">拍数</span>
 
-      <span class="text-muted-foreground">预期间隔</span>
-      <span class="text-foreground">{{ expectedMs.toFixed(1) }} ms</span>
-
-      <span class="text-muted-foreground">上次间隔</span>
-      <span
-        class="font-bold"
-        :class="Math.abs((parseFloat(lastMs) - expectedMs)) < 2 ? 'text-green-500' : 'text-red-500'"
-      >{{ lastMs }} ms</span>
-
-      <span class="text-muted-foreground">平均 (最近 16)</span>
-      <span
-        class=""
-        :class="Math.abs((parseFloat(avgMs) - expectedMs)) < 2 ? 'text-green-500' : 'text-red-500'"
-      >{{ avgMs }} ms</span>
-
-      <span class="text-muted-foreground">累计漂移</span>
-      <span
-        class="font-bold"
-        :class="Math.abs(parseFloat(driftMs)) < 3 ? 'text-green-500' : 'text-red-500'"
-      >{{ driftMs }} ms</span>
-
-      <span class="text-muted-foreground">已计拍数</span>
+      <span class="text-foreground">{{ expectedMs.toFixed(0) }}ms</span>
+      <span :class="ok(lastMs) ? 'text-green-500' : 'text-red-500'">{{ lastMs }}ms</span>
+      <span :class="ok(avgMs) ? 'text-green-500' : 'text-red-500'">{{ avgMs }}ms</span>
+      <span :class="Math.abs(parseFloat(driftMs)) < 3 ? 'text-green-500' : 'text-red-500'">{{ driftMs }}ms</span>
       <span class="text-foreground">{{ beatCount }}</span>
-    </div>
-    <div class="mt-2 text-[10px] text-muted-foreground">
-      Ctrl+Shift+D 切换
     </div>
   </div>
 </template>

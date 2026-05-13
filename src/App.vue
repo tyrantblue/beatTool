@@ -113,16 +113,16 @@ function onTimeSignatureUpdate(num: number, den: number) {
             @update:duration="duration = $event"
           />
         </div>
+
+        <TimingDebug
+          :last-beat-time="lastBeatTime"
+          :bpm="bpm"
+          :numerator="timeSignature.numerator"
+          :denominator="timeSignature.denominator"
+          :playing="playing"
+        />
       </div>
     </Transition>
-
-    <TimingDebug
-      :last-beat-time="lastBeatTime"
-      :bpm="bpm"
-      :numerator="timeSignature.numerator"
-      :denominator="timeSignature.denominator"
-      :playing="playing"
-    />
   </div>
 </template>
 

@@ -98,8 +98,8 @@ export function useMetronome(
       }
     }
 
-    // Wake up frequently enough to refill the window
-    schedulerTimer = setTimeout(scheduler, Math.max(15, (lookAhead / 4) * 1000))
+    // Wake every 25ms — fast enough that setTimeout jitter never skips a beat
+    schedulerTimer = setTimeout(scheduler, 25)
   }
 
   function start() {
