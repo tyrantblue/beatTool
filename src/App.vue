@@ -12,6 +12,7 @@ import PresetTempo from '@/components/PresetTempo.vue'
 import TimeSignature from '@/components/TimeSignature.vue'
 import CustomTimeSignature from '@/components/CustomTimeSignature.vue'
 import CountdownDisplay from '@/components/CountdownDisplay.vue'
+import TimingDebug from '@/components/TimingDebug.vue'
 
 const bpm = ref(120)
 const timeSignature = ref<TS>({ numerator: 4, denominator: 4 })
@@ -19,7 +20,7 @@ const playing = ref(false)
 const duration = ref(0)
 const showCustom = ref(false)
 
-const { currentBeat, start, stop, toggle } = useMetronome(bpm, timeSignature, playing)
+const { currentBeat, lastBeatTime, start, stop, toggle } = useMetronome(bpm, timeSignature, playing)
 const { remaining, isExpired } = useCountdown(duration, playing)
 
 const isDark = useDark()
@@ -114,6 +115,14 @@ function onTimeSignatureUpdate(num: number, den: number) {
         </div>
       </div>
     </Transition>
+
+    <TimingDebug
+      :last-beat-time="lastBeatTime"
+      :bpm="bpm"
+      :numerator="timeSignature.numerator"
+      :denominator="timeSignature.denominator"
+      :playing="playing"
+    />
   </div>
 </template>
 

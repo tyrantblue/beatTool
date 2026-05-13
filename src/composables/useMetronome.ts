@@ -11,6 +11,7 @@ export function useMetronome(
   playing: Ref<boolean>,
 ) {
   const currentBeat = ref(1)
+  const lastBeatTime = ref(0)
 
   let audioContext: AudioContext | null = null
   let schedulerTimer: ReturnType<typeof setTimeout> | null = null
@@ -87,7 +88,9 @@ export function useMetronome(
 
     // Schedule every beat that fits inside the look-ahead window
     while (beatTime(beatsAfterAnchor) < ctx.currentTime + lookAhead) {
-      scheduleClick(beatTime(beatsAfterAnchor), beatIndex === 0)
+      const t = beatTime(beatsAfterAnchor)
+      scheduleClick(t, beatIndex === 0)
+      lastBeatTime.value = t
       beatsAfterAnchor++
       beatIndex++
       if (beatIndex >= timeSignature.value.numerator) {
@@ -154,6 +157,7 @@ export function useMetronome(
 
   return {
     currentBeat,
+    lastBeatTime,
     start,
     stop,
     toggle,
