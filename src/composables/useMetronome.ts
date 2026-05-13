@@ -63,7 +63,9 @@ export function useMetronome(
         beatIndex = 0
       }
 
-      const secondsPerBeat = 60 / bpm.value
+      // BPM always = quarter-note beats per minute.
+      // Scale interval by 4/denominator so smaller note values click faster.
+      const secondsPerBeat = (60 / bpm.value) * (4 / timeSignature.value.denominator)
       nextBeatTime += secondsPerBeat
     }
 
