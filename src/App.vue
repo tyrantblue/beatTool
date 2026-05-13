@@ -95,6 +95,7 @@ function onTimeSignatureUpdate(num: number, den: number) {
               :denominator="timeSignature.denominator"
               @update:numerator="(n:number) => onTimeSignatureUpdate(n, timeSignature.denominator)"
               @update:denominator="(d:number) => onTimeSignatureUpdate(timeSignature.numerator, d)"
+              @close="showCustom = false"
             />
           </div>
 
