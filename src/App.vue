@@ -14,6 +14,8 @@ import CustomTimeSignature from '@/components/CustomTimeSignature.vue'
 import CountdownDisplay from '@/components/CountdownDisplay.vue'
 import TimingDebug from '@/components/TimingDebug.vue'
 
+declare const __APP_VERSION__: string
+
 const bpm = ref(120)
 const timeSignature = ref<TS>({ numerator: 4, denominator: 4 })
 const playing = ref(false)
@@ -63,6 +65,12 @@ function onTimeSignatureUpdate(num: number, den: number) {
     <!-- Card with enter transition -->
     <Transition name="card" appear>
       <div class="flex w-full max-w-md flex-col items-center gap-6 rounded-2xl border border-border bg-card p-6 shadow-lg sm:p-8">
+        <!-- App title -->
+        <div class="flex flex-col items-center gap-1">
+          <h1 class="text-xl font-bold tracking-tight text-foreground">BeatTool</h1>
+          <p class="text-xs text-muted-foreground">v{{ __APP_VERSION__ }} · Guitar Metronome</p>
+        </div>
+
         <BeatIndicator
           :current-beat="playing ? currentBeat : 0"
           :beat-count="timeSignature.numerator"
