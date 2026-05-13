@@ -15,9 +15,12 @@ export function useMetronome(
   let audioContext: AudioContext | null = null
   let schedulerTimer: ReturnType<typeof setTimeout> | null = null
   let beatUpdater: ReturnType<typeof setInterval> | null = null
-  let nextBeatTime = 0
+  // nextBeatTime is the absolute AudioContext time of the next beat to schedule.
+  // It is always computed as anchorTime + beatsAfterAnchor * spb,
+  // never accumulated with +=, so floating-point drift cannot compound.
+  let anchorTime = 0
+  let beatsAfterAnchor = 0
   let beatIndex = 0
-  let startTime = 0
 
   function getAudioContext(): AudioContext {
     if (!audioContext) {
@@ -52,10 +55,15 @@ export function useMetronome(
     return (60 / bpm.value) * (4 / timeSignature.value.denominator)
   }
 
+  // Absolute time of the beat `beatsAfterAnchor` beats after the anchor.
+  function beatTime(after: number): number {
+    return anchorTime + after * secondsPerBeat()
+  }
+
   function updateCurrentBeat() {
     const ctx = audioContext
     if (!ctx || !playing.value) return
-    const elapsed = ctx.currentTime - startTime
+    const elapsed = ctx.currentTime - anchorTime
     if (elapsed < 0) return
     const spb = secondsPerBeat()
     if (spb <= 0) return
@@ -66,43 +74,42 @@ export function useMetronome(
   function scheduler() {
     const ctx = getAudioContext()
     const spb = secondsPerBeat()
-    // Keep at least 1.5 beats ahead, min 100ms
-    const lookAhead = Math.max(0.1, spb * 1.5)
+    // Cover at least 4 beats ahead so setTimeout jitter cannot starve us.
+    const lookAhead = Math.max(0.2, spb * 4)
 
-    // If we fell behind (e.g. tab was backgrounded), resync
-    if (nextBeatTime < ctx.currentTime - spb) {
-      const elapsedBeats = Math.floor((ctx.currentTime - startTime) / spb)
-      nextBeatTime = startTime + elapsedBeats * spb
-      beatIndex = elapsedBeats % timeSignature.value.numerator
+    // If scheduler was starved (e.g. tab backgrounded), jump forward
+    const nextTime = beatTime(beatsAfterAnchor)
+    if (nextTime < ctx.currentTime - spb) {
+      const skippedBeats = Math.floor((ctx.currentTime - anchorTime) / spb)
+      beatsAfterAnchor = Math.max(beatsAfterAnchor, skippedBeats)
+      beatIndex = beatsAfterAnchor % timeSignature.value.numerator
     }
 
-    while (nextBeatTime < ctx.currentTime + lookAhead) {
-      const isAccent = beatIndex === 0
-      scheduleClick(nextBeatTime, isAccent)
-
+    // Schedule every beat that fits inside the look-ahead window
+    while (beatTime(beatsAfterAnchor) < ctx.currentTime + lookAhead) {
+      scheduleClick(beatTime(beatsAfterAnchor), beatIndex === 0)
+      beatsAfterAnchor++
       beatIndex++
       if (beatIndex >= timeSignature.value.numerator) {
         beatIndex = 0
       }
-      nextBeatTime += spb
     }
 
-    // Wake up at half the lookAhead window
-    schedulerTimer = setTimeout(scheduler, Math.max(15, (lookAhead / 2) * 1000))
+    // Wake up frequently enough to refill the window
+    schedulerTimer = setTimeout(scheduler, Math.max(15, (lookAhead / 4) * 1000))
   }
 
   function start() {
     if (playing.value) return
 
     const ctx = getAudioContext()
-    startTime = ctx.currentTime + 0.05
-    nextBeatTime = startTime
+    anchorTime = ctx.currentTime
+    beatsAfterAnchor = 0
     beatIndex = 0
     currentBeat.value = 1
 
     playing.value = true
     scheduler()
-    // Poll currentBeat ~30fps from actual elapsed time
     beatUpdater = setInterval(updateCurrentBeat, 33)
   }
 
@@ -128,6 +135,16 @@ export function useMetronome(
       start()
     }
   }
+
+  // When BPM or denominator changes mid-playback, re-anchor so the next
+  // beat fires exactly one new-spb interval from now.
+  watch([bpm, () => timeSignature.value.denominator], () => {
+    if (!playing.value || !audioContext) return
+    anchorTime = audioContext.currentTime
+    beatsAfterAnchor = 1
+    beatIndex = currentBeat.value // keep the beat position, advance on next tick
+    if (beatIndex >= timeSignature.value.numerator) beatIndex = 0
+  })
 
   watch(() => timeSignature.value.numerator, (newNum) => {
     if (beatIndex >= newNum) {
