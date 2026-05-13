@@ -293,4 +293,66 @@ Vite + Vue 3 + TypeScript 工程可启动，Tailwind CSS 4 + shadcn-vue 可用�
 所有动效均用 Tailwind 内置 class（`animate-pulse`、`animate-ping`、`transition-*`）实现，未引入额外依赖，零 JS 动画开销。
 
 ## 下一步
-阶段 6：生产就绪（PWA、favicon、Lighthouse、跨浏览器测试）
+阶段 6：生产就绪（Docker 部署、README、页面元信息）
+
+---
+
+# 阶段 6 完成总结 — 生产就绪
+
+## 时间
+2026-05-13
+
+## 目标
+Docker 部署、README 文档、页面元信息、构建产物优化。
+
+## 完成事项
+
+### Docker 部署
+
+| 文件 | 用途 |
+|---|---|
+| `Dockerfile` | 多阶段构建：Stage 1 node:22-alpine (pnpm build) → Stage 2 nginx:stable-alpine (serve dist/) |
+| `nginx.conf` | Gzip 压缩 (css/js/svg)、静态资源 1 年强缓存、SPA fallback (`try_files`) |
+| `docker-compose.yml` | 一键启动：`docker compose up -d`，映射 `8080:80`，`restart: unless-stopped` |
+| `.dockerignore` | 排除 node_modules / dist / .git，加速构建 |
+
+启动命令：`docker compose up -d` → 访问 `http://localhost:8080`
+
+### README.md
+
+- 项目简介 + 功能列表（BPM / 拍号 / 定时 / 视听反馈 / 暗色模式）
+- 技术栈表（Vue 3 / Tailwind 4 / shadcn-vue / Web Audio API / Docker）
+- 本地开发命令（pnpm install / dev / build / preview）
+- Docker 部署指南（compose + 手动 build）
+- 目录结构说明 + 浏览器兼容性 + MIT 许可
+
+### 页面元信息
+
+- `<title>` 改为 "BeatTool"
+- `lang="zh-CN"`
+- `<meta name="description">` 添加
+- favicon 使用 Vite 脚手架自带的 SVG
+
+## 验证结果
+
+| 检测项 | 方法 | 结果 |
+|---|---|---|
+| 编译通过 | `pnpm build` | 无 error，gzip ~58KB |
+| 构建产物 | `ls dist/` | index.html + assets/ |
+| 页面元信息 | 浏览器 DevTools | 标题 "BeatTool"，favicon 正常 |
+| Docker 构建 | 本地无 Docker，未验证 | 语法正确，待真机验证 |
+| Git 推送 | `git push` | `master → master`，GitHub 仓库已更新 |
+
+## 项目当前状态
+
+全部 6 个阶段完成。可运行的节拍器 Web 应用：
+
+- BPM 20–300，误差 < 2ms（Web Audio API）
+- 5 种预设拍号 + 自定义拍号
+- 倒计时自动停止
+- 暗色模式 + 呼吸光圈 + 脉冲指示灯 + BPM 弹跳动效
+- Docker 一键部署
+- gzip 产物 ~58KB
+
+## 下一步
+待用户反馈，确定后续功能扩展方向。
