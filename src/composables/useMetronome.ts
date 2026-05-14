@@ -20,6 +20,8 @@ export function useMetronome(
   let beatsAfterAnchor = 0
   let beatIndex = 0
 
+  // ---- audio plumbing ----
+
   function getAudioContext(): AudioContext {
     if (!audioContext) {
       audioContext = new AudioContext()
@@ -28,6 +30,17 @@ export function useMetronome(
       audioContext.resume()
     }
     return audioContext
+  }
+
+  function destroyAudioContext() {
+    if (schedulerTimer !== null) {
+      clearTimeout(schedulerTimer)
+      schedulerTimer = null
+    }
+    if (audioContext) {
+      audioContext.close()
+      audioContext = null
+    }
   }
 
   function scheduleClick(time: number, isAccent: boolean) {
@@ -49,6 +62,8 @@ export function useMetronome(
     osc.stop(time + dur)
   }
 
+  // ---- timing helpers ----
+
   function secondsPerBeat(): number {
     return (60 / bpm.value) * (4 / timeSignature.value.denominator)
   }
@@ -57,10 +72,11 @@ export function useMetronome(
     return anchorTime + after * secondsPerBeat()
   }
 
+  // ---- beat indicator updater (polled from audio clock) ----
+
   function updateCurrentBeat() {
-    const ctx = audioContext
-    if (!ctx || !playing.value) return
-    const elapsed = ctx.currentTime - anchorTime
+    if (!audioContext || !playing.value) return
+    const elapsed = audioContext.currentTime - anchorTime
     if (elapsed < 0) return
     const spb = secondsPerBeat()
     if (spb <= 0) return
@@ -68,11 +84,14 @@ export function useMetronome(
     currentBeat.value = (totalBeats % timeSignature.value.numerator) + 1
   }
 
+  // ---- look-ahead scheduler ----
+
   function scheduler() {
     const ctx = getAudioContext()
     const spb = secondsPerBeat()
     const lookAhead = Math.max(0.2, spb * 4)
 
+    // Re-sync if we fell behind (e.g. tab was backgrounded)
     const nextTime = beatTime(beatsAfterAnchor)
     if (nextTime < ctx.currentTime - spb) {
       const skippedBeats = Math.floor((ctx.currentTime - anchorTime) / spb)
@@ -94,12 +113,12 @@ export function useMetronome(
     schedulerTimer = setTimeout(scheduler, 25)
   }
 
+  // ---- public API ----
+
   function start() {
     if (playing.value) return
 
-    const ctx = getAudioContext()
-
-    anchorTime = ctx.currentTime
+    anchorTime = getAudioContext().currentTime
     beatsAfterAnchor = 0
     beatIndex = 0
     currentBeat.value = 1
@@ -113,43 +132,44 @@ export function useMetronome(
     if (!playing.value) return
 
     playing.value = false
-    if (schedulerTimer !== null) {
-      clearTimeout(schedulerTimer)
-      schedulerTimer = null
-    }
+    destroyAudioContext()
     if (beatUpdater !== null) {
       clearInterval(beatUpdater)
       beatUpdater = null
-    }
-    // Close the AudioContext to destroy all pre-scheduled oscillators.
-    // Next start() will create a fresh context.
-    if (audioContext) {
-      audioContext.close()
-      audioContext = null
     }
     currentBeat.value = 1
   }
 
   function toggle() {
-    if (playing.value) {
-      stop()
-    } else {
-      start()
-    }
+    playing.value ? stop() : start()
   }
 
-  watch([bpm, () => timeSignature.value.denominator], () => {
-    if (!playing.value || !audioContext) return
-    anchorTime = audioContext.currentTime
+  // ---- mid-playback parameter changes ----
+
+  function restartAudio() {
+    if (!playing.value) return
+
+    destroyAudioContext()
+
+    // Fresh context, first beat one interval from now
+    anchorTime = getAudioContext().currentTime
     beatsAfterAnchor = 1
     beatIndex = currentBeat.value
-    if (beatIndex >= timeSignature.value.numerator) beatIndex = 0
-  })
-
-  watch(() => timeSignature.value.numerator, (newNum) => {
-    if (beatIndex >= newNum) {
+    if (beatIndex >= timeSignature.value.numerator) {
       beatIndex = 0
     }
+
+    scheduler()
+  }
+
+  // BPM or denominator change → full restart to clear old-tempo clicks
+  watch([bpm, () => timeSignature.value.denominator], () => {
+    restartAudio()
+  })
+
+  // Numerator change → restart to keep accent pattern aligned
+  watch(() => timeSignature.value.numerator, () => {
+    restartAudio()
   })
 
   return {

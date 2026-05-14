@@ -86,6 +86,7 @@ Chrome / Firefox / Edge 最新版。需要 Web Audio API 支持。
 
 ### v0.2.2 (2026-05-14)
 - 修复：停止播放后短时间内再次播放会出现重复声音，改为 close AudioContext 彻底销毁已排队的音频节点
+- 修复：播放中切换 BPM 或拍号时出现重复节拍声音，改为切换时销毁并重建 AudioContext
 - 新增：README 更新日志
 
 ### v0.2.1 (2026-05-14)
