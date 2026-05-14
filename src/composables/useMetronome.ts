@@ -1,14 +1,23 @@
 import { ref, watch, type Ref } from 'vue'
+import type { ClickSound } from './useSettings'
 
 export interface TimeSignature {
   numerator: number
   denominator: number
 }
 
+const SOUND_PRESETS: Record<ClickSound, { type: OscillatorType; accentHz: number; weakHz: number; accentMs: number; weakMs: number }> = {
+  triangle:  { type: 'triangle', accentHz: 880,  weakHz: 660,  accentMs: 30, weakMs: 20 },
+  sine:      { type: 'sine',     accentHz: 880,  weakHz: 660,  accentMs: 30, weakMs: 20 },
+  square:    { type: 'square',   accentHz: 600,  weakHz: 450,  accentMs: 25, weakMs: 15 },
+  wood:      { type: 'sine',     accentHz: 1200, weakHz: 900,  accentMs: 10, weakMs: 8 },
+}
+
 export function useMetronome(
   bpm: Ref<number>,
   timeSignature: Ref<TimeSignature>,
   playing: Ref<boolean>,
+  clickSound: Ref<ClickSound>,
 ) {
   const currentBeat = ref(1)
   const lastBeatTime = ref(0)
@@ -45,13 +54,14 @@ export function useMetronome(
 
   function scheduleClick(time: number, isAccent: boolean) {
     const ctx = getAudioContext()
+    const preset = SOUND_PRESETS[clickSound.value]
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
 
-    osc.type = 'triangle'
-    osc.frequency.value = isAccent ? 880 : 660
+    osc.type = preset.type
+    osc.frequency.value = isAccent ? preset.accentHz : preset.weakHz
 
-    const dur = isAccent ? 0.03 : 0.02
+    const dur = (isAccent ? preset.accentMs : preset.weakMs) / 1000
     gain.gain.setValueAtTime(1, time)
     gain.gain.exponentialRampToValueAtTime(0.001, time + dur)
 

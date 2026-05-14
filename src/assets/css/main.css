@@ -118,6 +118,36 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* ---- Theme color overrides ---- */
+[data-theme="blue"] {
+  --primary: oklch(0.488 0.243 264.376);
+  --primary-foreground: oklch(0.985 0 0);
+}
+[data-theme="purple"] {
+  --primary: oklch(0.45 0.28 300);
+  --primary-foreground: oklch(0.985 0 0);
+}
+[data-theme="green"] {
+  --primary: oklch(0.527 0.154 150);
+  --primary-foreground: oklch(0.985 0 0);
+}
+[data-theme="orange"] {
+  --primary: oklch(0.55 0.18 50);
+  --primary-foreground: oklch(0.985 0 0);
+}
+[data-theme="red"] {
+  --primary: oklch(0.505 0.213 15);
+  --primary-foreground: oklch(0.985 0 0);
+}
+
+/* ---- Border effects ---- */
+.border-glow {
+  box-shadow: 0 0 12px 2px oklch(0.488 0.243 264.376 / 0.25);
+}
+.border-rainbow {
+  border-image: linear-gradient(90deg, #f44, #f84, #ff4, #4f4, #4af, #84f, #f4f) 1;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
