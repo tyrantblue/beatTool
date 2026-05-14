@@ -9,7 +9,7 @@
 - **定时停止** — 倒计时归零自动停止播放
 - **视听反馈** — 强拍 / 弱拍区分音色，节拍指示灯脉冲动效
 - **暗色模式** — 一键切换，localStorage 持久化
-- **个性化设置** — 主题色、拍子音色、指示灯动效、边框特效可切换，localStorage 持久化
+- **个性化设置** — 5 种主题色、4 种拍子音色、4 种指示灯动效、4 种边框特效
 
 ## 技术栈
 
@@ -62,21 +62,25 @@ docker run -d -p 8080:80 beattool
 src/
 ├── main.ts                         # 入口
 ├── App.vue                         # 根组件，全局状态
-├── assets/css/main.css             # Tailwind 4 + shadcn 变量
+├── vite-env.d.ts                   # Vite 类型声明 + __APP_VERSION__
+├── assets/css/main.css             # Tailwind 4 + shadcn 变量 + 主题色
 ├── lib/utils.ts                    # cn() 工具函数
 ├── components/
-│   ├── ui/                         # shadcn-vue 组件
+│   ├── ui/                         # shadcn-vue 组件 (Button, Slider)
 │   ├── MetronomeDisplay.vue        # BPM 数字 + -/+ 按钮
 │   ├── BpmSlider.vue               # BPM 滑块
-│   ├── TimeSignature.vue           # 拍号预设
-│   ├── CustomTimeSignature.vue     # 自定义拍号
-│   ├── PlayButton.vue              # 播放/停止
-│   ├── BeatIndicator.vue           # 节拍指示灯
-│   ├── CountdownDisplay.vue        # 倒计时
-│   └── PresetTempo.vue             # 速度预设
+│   ├── TimeSignature.vue           # 拍号预设按钮
+│   ├── CustomTimeSignature.vue     # 自定义拍号弹窗
+│   ├── PlayButton.vue              # 播放/停止 (呼吸光圈)
+│   ├── BeatIndicator.vue           # 节拍指示灯 (可切换动效)
+│   ├── CountdownDisplay.vue        # 倒计时弹窗 (预设 + 手动)
+│   ├── PresetTempo.vue             # 速度预设芯片
+│   ├── SettingsModal.vue           # 设置弹窗 (主题/音色/动效/边框)
+│   └── TimingDebug.vue             # 节拍校对面板
 └── composables/
-    ├── useMetronome.ts             # 节拍引擎
-    └── useCountdown.ts             # 倒计时逻辑
+    ├── useMetronome.ts             # 节拍引擎 (Web Audio API)
+    ├── useCountdown.ts             # 倒计时逻辑
+    └── useSettings.ts              # 偏好设置 (localStorage 持久化)
 ```
 
 ## 浏览器支持
@@ -84,6 +88,12 @@ src/
 Chrome / Firefox / Edge 最新版。需要 Web Audio API 支持。
 
 ## 更新日志
+
+### v0.3.2 (2026-05-14)
+- 修复：设置面板改为 Done 确认机制 — 选择暂存本地，点击 Done 一次性应用全部更改
+- 修复：拖拽 BPM 滑块时连续爆音 — BPM/分母 watch 加入 250ms 防抖
+- 修复：Teleport 弹窗（设置/自定义拍号/倒计时）不继承主题色 — data-theme 上移到 html 元素
+- 优化：版本号移至卡片底部，与作者署名合并为一行
 
 ### v0.3.1 (2026-05-14)
 - 修复：改变 BPM/拍号后重音位置偏移（`beatsAfterAnchor=0` 使第一时间公式与播音对齐）

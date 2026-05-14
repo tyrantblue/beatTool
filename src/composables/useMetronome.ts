@@ -1,4 +1,5 @@
 import { ref, watch, type Ref } from 'vue'
+import { watchDebounced } from '@vueuse/core'
 import type { ClickSound } from './useSettings'
 
 export interface TimeSignature {
@@ -171,12 +172,13 @@ export function useMetronome(
     scheduler()
   }
 
-  // BPM or denominator change → full restart to clear old-tempo clicks
-  watch([bpm, () => timeSignature.value.denominator], () => {
+  // BPM or denominator change → debounced restart to avoid rapid-fire
+  // clicks when dragging the slider
+  watchDebounced([bpm, () => timeSignature.value.denominator], () => {
     restartAudio()
-  })
+  }, { debounce: 250, maxWait: 500 })
 
-  // Numerator change → restart to keep accent pattern aligned
+  // Numerator change — no debounce needed (button clicks, not dragging)
   watch(() => timeSignature.value.numerator, () => {
     restartAudio()
   })

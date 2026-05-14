@@ -5,6 +5,7 @@ import { Sun, Moon, Settings } from 'lucide-vue-next'
 import { useMetronome, type TimeSignature as TS } from '@/composables/useMetronome'
 import { useCountdown } from '@/composables/useCountdown'
 import { useSettings } from '@/composables/useSettings'
+import type { ThemeColor, ClickSound, BeatAnimation, BorderEffect } from '@/composables/useSettings'
 import MetronomeDisplay from '@/components/MetronomeDisplay.vue'
 import BpmSlider from '@/components/BpmSlider.vue'
 import PlayButton from '@/components/PlayButton.vue'
@@ -26,7 +27,7 @@ const duration = ref(0)
 const showCustom = ref(false)
 const showSettings = ref(false)
 
-const { themeColor, clickSound, beatAnimation, borderEffect, resetAll } = useSettings()
+const { themeColor, clickSound, beatAnimation, borderEffect } = useSettings()
 
 const { currentBeat, lastBeatTime, start, stop, toggle } = useMetronome(bpm, timeSignature, playing, clickSound)
 const { remaining, isExpired } = useCountdown(duration, playing)
@@ -45,6 +46,9 @@ const borderClass = computed(() => {
   }
 })
 
+// Keep data-theme on <html> so Teleported modals inherit CSS variables
+watch(themeColor, (c) => { document.documentElement.dataset.theme = c }, { immediate: true })
+
 watch(isExpired, (expired) => {
   if (expired) stop()
 })
@@ -58,6 +62,13 @@ function onTimeSignatureUpdate(num: number, den: number) {
   showCustom.value = false
 }
 
+function onSettingsApply(s: { themeColor: ThemeColor; clickSound: ClickSound; beatAnimation: BeatAnimation; borderEffect: BorderEffect }) {
+  themeColor.value = s.themeColor
+  clickSound.value = s.clickSound
+  beatAnimation.value = s.beatAnimation
+  borderEffect.value = s.borderEffect
+}
+
 ;(window as any).__metro = {
   bpm, timeSignature, playing, duration,
   currentBeat, remaining, isExpired,
@@ -66,11 +77,8 @@ function onTimeSignatureUpdate(num: number, den: number) {
 </script>
 
 <template>
-  <div
-    class="relative flex min-h-screen items-center justify-center bg-background text-foreground p-4 transition-colors duration-300"
-    :data-theme="themeColor"
-  >
-    <!-- Top bar: settings + dark toggle -->
+  <div class="relative flex min-h-screen items-center justify-center bg-background text-foreground p-4 transition-colors duration-300">
+    <!-- Top bar -->
     <div class="absolute top-4 left-4 right-4 flex items-center justify-between">
       <button
         class="flex size-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:text-foreground"
@@ -96,10 +104,9 @@ function onTimeSignatureUpdate(num: number, den: number) {
         class="flex w-full max-w-md flex-col items-center gap-6 rounded-2xl border border-border bg-card p-6 shadow-lg sm:p-8"
         :class="borderClass"
       >
-        <!-- Title -->
         <div class="flex flex-col items-center gap-1">
           <h1 class="text-xl font-bold tracking-tight text-foreground">BeatTool</h1>
-          <p class="text-xs text-muted-foreground">v{{ appVersion }} · Guitar Metronome</p>
+          <p class="text-xs text-muted-foreground">Guitar Metronome</p>
         </div>
 
         <BeatIndicator
@@ -133,47 +140,33 @@ function onTimeSignatureUpdate(num: number, den: number) {
             />
           </div>
 
-          <PlayButton
-            :playing="playing"
-            :beat-interval="beatInterval"
-            class="mt-6"
-            @toggle="toggle()"
-          />
+          <PlayButton :playing="playing" :beat-interval="beatInterval" class="mt-6" @toggle="toggle()" />
 
           <CountdownDisplay
-            :duration="duration"
-            :remaining="remaining"
-            :playing="playing"
-            class="mt-1"
-            @update:duration="duration = $event"
+            :duration="duration" :remaining="remaining" :playing="playing"
+            class="mt-1" @update:duration="duration = $event"
           />
         </div>
 
         <TimingDebug
-          :last-beat-time="lastBeatTime"
-          :bpm="bpm"
-          :numerator="timeSignature.numerator"
-          :denominator="timeSignature.denominator"
+          :last-beat-time="lastBeatTime" :bpm="bpm"
+          :numerator="timeSignature.numerator" :denominator="timeSignature.denominator"
           :playing="playing"
         />
 
-        <!-- Author -->
-        <p class="text-[11px] text-muted-foreground/60">by Tyrant Blue</p>
+        <p class="text-[11px] text-muted-foreground/60">
+          v{{ appVersion }} · by Tyrant Blue
+        </p>
       </div>
     </Transition>
 
-    <!-- Settings modal -->
     <SettingsModal
       v-if="showSettings"
       :theme-color="themeColor"
       :click-sound="clickSound"
       :beat-animation="beatAnimation"
       :border-effect="borderEffect"
-      @update:theme-color="themeColor = $event"
-      @update:click-sound="clickSound = $event"
-      @update:beat-animation="beatAnimation = $event"
-      @update:border-effect="borderEffect = $event"
-      @reset="resetAll()"
+      @apply="onSettingsApply"
       @close="showSettings = false"
     />
   </div>
