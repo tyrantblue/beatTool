@@ -130,11 +130,16 @@ const borders: { value: BorderEffect; label: string }[] = [
           </div>
         </fieldset>
 
-        <!-- Reset -->
-        <button
-          class="w-full rounded-lg border border-border py-2 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          @click="emit('reset')"
-        >Reset to Defaults</button>
+        <div class="flex gap-2">
+          <button
+            class="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            @click="emit('close')"
+          >Done</button>
+          <button
+            class="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            @click="emit('reset')"
+          >Reset</button>
+        </div>
       </div>
     </div>
   </Teleport>

@@ -161,10 +161,10 @@ export function useMetronome(
 
     destroyAudioContext()
 
-    // Fresh context, first beat one interval from now.
-    // Always start at beat 0 (accent) — simplest predictable behaviour.
+    // Fresh context. Beat 0 fires immediately so currentBeat stays
+    // in sync with the time-based formula (elapsed / spb).
     anchorTime = getAudioContext().currentTime
-    beatsAfterAnchor = 1
+    beatsAfterAnchor = 0
     beatIndex = 0
     currentBeat.value = 1
 
