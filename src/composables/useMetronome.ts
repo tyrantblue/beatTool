@@ -151,13 +151,12 @@ export function useMetronome(
 
     destroyAudioContext()
 
-    // Fresh context, first beat one interval from now
+    // Fresh context, first beat one interval from now.
+    // Always start at beat 0 (accent) — simplest predictable behaviour.
     anchorTime = getAudioContext().currentTime
     beatsAfterAnchor = 1
-    beatIndex = currentBeat.value
-    if (beatIndex >= timeSignature.value.numerator) {
-      beatIndex = 0
-    }
+    beatIndex = 0
+    currentBeat.value = 1
 
     scheduler()
   }
