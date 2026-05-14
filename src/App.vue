@@ -15,6 +15,7 @@ import CountdownDisplay from '@/components/CountdownDisplay.vue'
 import TimingDebug from '@/components/TimingDebug.vue'
 
 declare const __APP_VERSION__: string
+const appVersion = __APP_VERSION__
 
 const bpm = ref(120)
 const timeSignature = ref<TS>({ numerator: 4, denominator: 4 })
@@ -68,7 +69,7 @@ function onTimeSignatureUpdate(num: number, den: number) {
         <!-- App title -->
         <div class="flex flex-col items-center gap-1">
           <h1 class="text-xl font-bold tracking-tight text-foreground">BeatTool</h1>
-          <p class="text-xs text-muted-foreground">v{{ __APP_VERSION__ }} · Guitar Metronome</p>
+          <p class="text-xs text-muted-foreground">v{{ appVersion }} · Guitar Metronome</p>
         </div>
 
         <BeatIndicator

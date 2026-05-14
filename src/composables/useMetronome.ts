@@ -14,11 +14,9 @@ export function useMetronome(
   const lastBeatTime = ref(0)
 
   let audioContext: AudioContext | null = null
+  let masterGain: GainNode | null = null
   let schedulerTimer: ReturnType<typeof setTimeout> | null = null
   let beatUpdater: ReturnType<typeof setInterval> | null = null
-  // nextBeatTime is the absolute AudioContext time of the next beat to schedule.
-  // It is always computed as anchorTime + beatsAfterAnchor * spb,
-  // never accumulated with +=, so floating-point drift cannot compound.
   let anchorTime = 0
   let beatsAfterAnchor = 0
   let beatIndex = 0
@@ -26,6 +24,9 @@ export function useMetronome(
   function getAudioContext(): AudioContext {
     if (!audioContext) {
       audioContext = new AudioContext()
+      masterGain = audioContext.createGain()
+      masterGain.gain.value = 1
+      masterGain.connect(audioContext.destination)
     }
     if (audioContext.state === 'suspended') {
       audioContext.resume()
@@ -46,7 +47,7 @@ export function useMetronome(
     gain.gain.exponentialRampToValueAtTime(0.001, time + dur)
 
     osc.connect(gain)
-    gain.connect(ctx.destination)
+    gain.connect(masterGain!)
 
     osc.start(time)
     osc.stop(time + dur)
@@ -56,7 +57,6 @@ export function useMetronome(
     return (60 / bpm.value) * (4 / timeSignature.value.denominator)
   }
 
-  // Absolute time of the beat `beatsAfterAnchor` beats after the anchor.
   function beatTime(after: number): number {
     return anchorTime + after * secondsPerBeat()
   }
@@ -75,10 +75,8 @@ export function useMetronome(
   function scheduler() {
     const ctx = getAudioContext()
     const spb = secondsPerBeat()
-    // Cover at least 4 beats ahead so setTimeout jitter cannot starve us.
     const lookAhead = Math.max(0.2, spb * 4)
 
-    // If scheduler was starved (e.g. tab backgrounded), jump forward
     const nextTime = beatTime(beatsAfterAnchor)
     if (nextTime < ctx.currentTime - spb) {
       const skippedBeats = Math.floor((ctx.currentTime - anchorTime) / spb)
@@ -86,7 +84,6 @@ export function useMetronome(
       beatIndex = beatsAfterAnchor % timeSignature.value.numerator
     }
 
-    // Schedule every beat that fits inside the look-ahead window
     while (beatTime(beatsAfterAnchor) < ctx.currentTime + lookAhead) {
       const t = beatTime(beatsAfterAnchor)
       scheduleClick(t, beatIndex === 0)
@@ -98,7 +95,6 @@ export function useMetronome(
       }
     }
 
-    // Wake every 25ms — fast enough that setTimeout jitter never skips a beat
     schedulerTimer = setTimeout(scheduler, 25)
   }
 
@@ -106,6 +102,10 @@ export function useMetronome(
     if (playing.value) return
 
     const ctx = getAudioContext()
+    // Ensure master gain is open
+    masterGain!.gain.cancelScheduledValues(ctx.currentTime)
+    masterGain!.gain.setValueAtTime(1, ctx.currentTime)
+
     anchorTime = ctx.currentTime
     beatsAfterAnchor = 0
     beatIndex = 0
@@ -120,6 +120,11 @@ export function useMetronome(
     if (!playing.value) return
 
     playing.value = false
+    // Immediately silence all pre-scheduled clicks
+    if (masterGain && audioContext) {
+      masterGain.gain.cancelScheduledValues(audioContext.currentTime)
+      masterGain.gain.setValueAtTime(0, audioContext.currentTime)
+    }
     if (schedulerTimer !== null) {
       clearTimeout(schedulerTimer)
       schedulerTimer = null
@@ -139,13 +144,11 @@ export function useMetronome(
     }
   }
 
-  // When BPM or denominator changes mid-playback, re-anchor so the next
-  // beat fires exactly one new-spb interval from now.
   watch([bpm, () => timeSignature.value.denominator], () => {
     if (!playing.value || !audioContext) return
     anchorTime = audioContext.currentTime
     beatsAfterAnchor = 1
-    beatIndex = currentBeat.value // keep the beat position, advance on next tick
+    beatIndex = currentBeat.value
     if (beatIndex >= timeSignature.value.numerator) beatIndex = 0
   })
 

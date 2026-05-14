@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from "vue";
 
-const props = defineProps<{ currentBeat: number; beatCount: number }>()
+const props = defineProps<{ currentBeat: number; beatCount: number }>();
 
-const dots = computed(() => Array.from({ length: props.beatCount }, (_, i) => i + 1))
+const dots = computed(() =>
+  Array.from({ length: props.beatCount }, (_, i) => i + 1),
+);
 </script>
 
 <template>
