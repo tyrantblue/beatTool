@@ -14,7 +14,6 @@ export function useMetronome(
   const lastBeatTime = ref(0)
 
   let audioContext: AudioContext | null = null
-  let masterGain: GainNode | null = null
   let schedulerTimer: ReturnType<typeof setTimeout> | null = null
   let beatUpdater: ReturnType<typeof setInterval> | null = null
   let anchorTime = 0
@@ -24,9 +23,6 @@ export function useMetronome(
   function getAudioContext(): AudioContext {
     if (!audioContext) {
       audioContext = new AudioContext()
-      masterGain = audioContext.createGain()
-      masterGain.gain.value = 1
-      masterGain.connect(audioContext.destination)
     }
     if (audioContext.state === 'suspended') {
       audioContext.resume()
@@ -47,7 +43,7 @@ export function useMetronome(
     gain.gain.exponentialRampToValueAtTime(0.001, time + dur)
 
     osc.connect(gain)
-    gain.connect(masterGain!)
+    gain.connect(ctx.destination)
 
     osc.start(time)
     osc.stop(time + dur)
@@ -102,9 +98,6 @@ export function useMetronome(
     if (playing.value) return
 
     const ctx = getAudioContext()
-    // Ensure master gain is open
-    masterGain!.gain.cancelScheduledValues(ctx.currentTime)
-    masterGain!.gain.setValueAtTime(1, ctx.currentTime)
 
     anchorTime = ctx.currentTime
     beatsAfterAnchor = 0
@@ -120,11 +113,6 @@ export function useMetronome(
     if (!playing.value) return
 
     playing.value = false
-    // Immediately silence all pre-scheduled clicks
-    if (masterGain && audioContext) {
-      masterGain.gain.cancelScheduledValues(audioContext.currentTime)
-      masterGain.gain.setValueAtTime(0, audioContext.currentTime)
-    }
     if (schedulerTimer !== null) {
       clearTimeout(schedulerTimer)
       schedulerTimer = null
@@ -132,6 +120,12 @@ export function useMetronome(
     if (beatUpdater !== null) {
       clearInterval(beatUpdater)
       beatUpdater = null
+    }
+    // Close the AudioContext to destroy all pre-scheduled oscillators.
+    // Next start() will create a fresh context.
+    if (audioContext) {
+      audioContext.close()
+      audioContext = null
     }
     currentBeat.value = 1
   }
