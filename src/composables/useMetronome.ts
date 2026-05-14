@@ -183,6 +183,11 @@ export function useMetronome(
     restartAudio()
   })
 
+  // Click sound change — restart to replace pre-scheduled old-sound clicks
+  watch(clickSound, () => {
+    if (playing.value) restartAudio()
+  })
+
   return {
     currentBeat,
     lastBeatTime,
